@@ -1,6 +1,4 @@
-use binius_core::Word;
 use binius_frontend::{Circuit, CircuitBuilder, Wire};
-
 
 
 pub fn a()->Circuit{
