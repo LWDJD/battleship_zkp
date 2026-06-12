@@ -12,7 +12,7 @@ static ATTACK: OnceLock<AttackCircuit> = OnceLock::new();
 // 初始化棋盘
 pub struct ChessboardCircuit {
     pub circuit: Circuit,
-    pub cont: Wire,
+    pub count: Wire,
     pub size: Wire,
     pub piece: [Wire; 1],
     pub nonce: [Wire; 4],
@@ -22,7 +22,7 @@ pub struct ChessboardCircuit {
 // 攻击证明
 pub struct AttackCircuit{
     pub circuit: Circuit,
-    pub cont: Wire,
+    pub count: Wire,
     pub size: Wire,
     pub piece: [Wire; 1],
     pub nonce: [Wire; 4],
@@ -39,7 +39,7 @@ pub fn init_chessboard()->&'static ChessboardCircuit{
         // 随机数
         let nonce:[_; 4] = core::array::from_fn(|_| builder.add_witness());
         // 棋子数量
-        let cont = builder.add_inout();
+        let count = builder.add_inout();
         // 棋盘大小
         let size = builder.add_inout();
         // 多个棋子坐标，每个棋子使用一个字节
@@ -62,12 +62,12 @@ pub fn init_chessboard()->&'static ChessboardCircuit{
         // 棋子数量小于9
         builder.assert_true("A",
                             builder.icmp_ult(
-                                cont,
+                                count,
                                 builder.add_constant_64(9)
                             )
         );
         // 棋子数量不为0
-        builder.assert_non_zero("count_non_zero",cont);
+        builder.assert_non_zero("count_non_zero", count);
         // 棋盘大小不超过256
         builder.assert_true("B",
                             builder.icmp_ult(
@@ -77,7 +77,7 @@ pub fn init_chessboard()->&'static ChessboardCircuit{
         );
         // 棋盘大小不小于棋子数量
         builder.assert_true("C",
-                            builder.icmp_ule(cont,size)
+                            builder.icmp_ule(count, size)
         );
 
 
@@ -86,13 +86,13 @@ pub fn init_chessboard()->&'static ChessboardCircuit{
         // let sha256 = Sha256::new(&builder,builder.add_constant_64(40),out_hash, message);
         assert_sha256(&builder,&message,out_hash);
         // 棋盘检查
-        chessboard_check(&builder,&piece_list,cont,size);
+        chessboard_check(&builder, &piece_list, count, size);
 
         let circuit = builder.build();
 
         ChessboardCircuit {
                 circuit,
-                cont,
+            count,
                 size,
                 piece,
                 nonce,
@@ -108,7 +108,7 @@ pub fn attack()->&'static AttackCircuit{
         // 随机数
         let nonce:[_; 4] = core::array::from_fn(|_| builder.add_witness());
         // 棋子数量
-        let cont = builder.add_inout();
+        let count = builder.add_inout();
         // 棋盘大小
         let size = builder.add_inout();
         // 多个棋子坐标，每个棋子使用一个字节
@@ -134,12 +134,12 @@ pub fn attack()->&'static AttackCircuit{
         // 棋子数量小于9
         builder.assert_true("A",
                             builder.icmp_ult(
-                                cont,
+                                count,
                                 builder.add_constant_64(9)
                             )
         );
         // 棋子数量不为0
-        builder.assert_non_zero("count_non_zero",cont);
+        builder.assert_non_zero("count_non_zero", count);
         // 棋盘大小不超过256
         builder.assert_true("B",
                             builder.icmp_ult(
@@ -149,7 +149,7 @@ pub fn attack()->&'static AttackCircuit{
         );
         // 棋盘大小不小于棋子数量
         builder.assert_true("C",
-                            builder.icmp_ule(cont,size)
+                            builder.icmp_ule(count, size)
         );
 
 
@@ -158,7 +158,7 @@ pub fn attack()->&'static AttackCircuit{
         // let sha256 = Sha256::new(&builder,builder.add_constant_64(40),out_hash, message);
         assert_sha256(&builder,&message,out_hash);
         // 棋盘检查
-        chessboard_check(&builder,&piece_list,cont,size);
+        chessboard_check(&builder, &piece_list, count, size);
 
         // 攻击检查
         for i in 0..piece_list.len(){
@@ -169,7 +169,7 @@ pub fn attack()->&'static AttackCircuit{
                  // 不属于使用 允许的情况 0 and 0 == 0
                  builder.band(
                      // 判断棋子是否为被使用的棋子，小于为1，大于等于为0
-                     builder.icmp_ult(builder.add_constant_64(i as u64), cont),
+                     builder.icmp_ult(builder.add_constant_64(i as u64), count),
                      // 判断被攻击的坐标是否成功
                      // 是目标 失败 1 and 1 == 1 (不允许出现的情况)
                      // 是目标 成功 1 and 0 == 0
@@ -195,7 +195,7 @@ pub fn attack()->&'static AttackCircuit{
 
         AttackCircuit {
             circuit,
-            cont,
+            count,
             size,
             piece,
             nonce,
@@ -208,7 +208,7 @@ pub fn attack()->&'static AttackCircuit{
 
 // 棋盘检查
 // 棋子格子没有冲突，没有超出棋盘大小
-fn chessboard_check(builder: &CircuitBuilder,piece:&Vec<Wire>,cont:Wire,size:Wire){
+fn chessboard_check(builder: &CircuitBuilder, piece:&Vec<Wire>, count:Wire, size:Wire){
 
     for i in 0..piece.len() {
 
@@ -220,7 +220,7 @@ fn chessboard_check(builder: &CircuitBuilder,piece:&Vec<Wire>,cont:Wire,size:Wir
             // 不属于棋子范围并且大于等于棋盘范围 0 band 1 == 0
             builder.band(
                 // 判断属于棋子范围，属于为1，不属于为0
-                builder.icmp_ult(builder.add_constant_64(i as u64),cont),
+                builder.icmp_ult(builder.add_constant_64(i as u64), count),
                 // 判断棋子小于棋盘范围，大于等于为1，小于为0
                 builder.icmp_uge(piece[i],size)
             )
@@ -238,8 +238,8 @@ fn chessboard_check(builder: &CircuitBuilder,piece:&Vec<Wire>,cont:Wire,size:Wir
                  builder.band(
                      // 判断两个元素同时属于棋子范围，同时属于范围内为 1
                      builder.band(
-                         builder.icmp_ult(builder.add_constant_64(i as u64),cont),
-                         builder.icmp_ult(builder.add_constant_64(j as u64),cont)
+                         builder.icmp_ult(builder.add_constant_64(i as u64), count),
+                         builder.icmp_ult(builder.add_constant_64(j as u64), count)
                      ),
                      // 判断两个棋子位置是否相同，相同为1
                      builder.icmp_eq(
