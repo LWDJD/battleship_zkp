@@ -6,7 +6,10 @@ use binius_frontend::{Circuit, CircuitBuilder, Wire};
 
 /// 静态缓存
 static CHESSBOARD: OnceLock<ChessboardCircuit> = OnceLock::new();
+static ATTACK: OnceLock<AttackCircuit> = OnceLock::new();
 // 传出电路与传输线的结构体
+
+// 初始化棋盘
 pub struct ChessboardCircuit {
     pub circuit: Circuit,
     pub cont: Wire,
@@ -16,9 +19,21 @@ pub struct ChessboardCircuit {
     pub out_hash: [Wire; 4],
 }
 
+// 攻击证明
+pub struct AttackCircuit{
+    pub circuit: Circuit,
+    pub cont: Wire,
+    pub size: Wire,
+    pub piece: [Wire; 1],
+    pub nonce: [Wire; 4],
+    pub out_hash: [Wire; 4],
+    pub attack_piece: Wire,
+    pub out_attack_result: Wire,
+}
+
 /// 棋盘初始化证明与存证哈希
 pub fn init_chessboard()->&'static ChessboardCircuit{
-    CHESSBOARD.get_or_init(|| {
+        CHESSBOARD.get_or_init(|| {
         let builder:CircuitBuilder = CircuitBuilder::new();
 
         // 随机数
@@ -82,6 +97,111 @@ pub fn init_chessboard()->&'static ChessboardCircuit{
                 piece,
                 nonce,
                 out_hash,
+        }
+    })
+}
+
+pub fn attack()->&'static AttackCircuit{
+    ATTACK.get_or_init(|| {
+        let builder:CircuitBuilder = CircuitBuilder::new();
+
+        // 随机数
+        let nonce:[_; 4] = core::array::from_fn(|_| builder.add_witness());
+        // 棋子数量
+        let cont = builder.add_inout();
+        // 棋盘大小
+        let size = builder.add_inout();
+        // 多个棋子坐标，每个棋子使用一个字节
+        let piece:[_; 1] = core::array::from_fn(|_| builder.add_witness());
+        // 攻击坐标
+        let attack_piece:Wire = builder.add_inout();
+
+        // 棋子坐标+nonce的哈希
+        let out_hash:[_; 4] = core::array::from_fn(|_| builder.add_inout());
+        // 攻击结果 0为失败 其他为成功
+        let out_attack_result:Wire = builder.add_inout();
+
+        // 计算
+        // 消息拼接 坐标+nonce
+        let message: Vec<_> = piece.into_iter().chain(nonce).collect();
+
+        // 坐标拆分
+        let piece_list: Vec<Wire> = (0..8)
+            .map(|j| builder.extract_byte(piece[0], j))
+            .collect();
+
+        // 约束
+        // 棋子数量小于9
+        builder.assert_true("A",
+                            builder.icmp_ult(
+                                cont,
+                                builder.add_constant_64(9)
+                            )
+        );
+        // 棋子数量不为0
+        builder.assert_non_zero("count_non_zero",cont);
+        // 棋盘大小不超过256
+        builder.assert_true("B",
+                            builder.icmp_ult(
+                                size,
+                                builder.add_constant_64(257)
+                            )
+        );
+        // 棋盘大小不小于棋子数量
+        builder.assert_true("C",
+                            builder.icmp_ule(cont,size)
+        );
+
+
+
+        // 棋子位置+nonce的sha256哈希正确
+        // let sha256 = Sha256::new(&builder,builder.add_constant_64(40),out_hash, message);
+        assert_sha256(&builder,&message,out_hash);
+        // 棋盘检查
+        chessboard_check(&builder,&piece_list,cont,size);
+
+        // 攻击检查
+        for i in 0..piece_list.len(){
+            builder.assert_false("attack",
+                 // 属于使用 不允许的情况 1 and 1 == 1(不通过)
+                 // 属于使用 允许的情况   1 and 0 == 0
+                 // 不属于使用 不允许的情况 1 and 0 == 0
+                 // 不属于使用 允许的情况 0 and 0 == 0
+                 builder.band(
+                     // 判断棋子是否为被使用的棋子，小于为1，大于等于为0
+                     builder.icmp_ult(builder.add_constant_64(i as u64), cont),
+                     // 判断被攻击的坐标是否成功
+                     // 是目标 失败 1 and 1 == 1 (不允许出现的情况)
+                     // 是目标 成功 1 and 0 == 0
+                     // 不是目标 失败 0 and 0 == 0
+                     // 不是目标 成功 0 and 1 == 0
+                     builder.band(
+                        //确认此元素是否为被攻击的坐标,1为是 0为否
+                        builder.icmp_eq(
+                            piece_list[i],
+                            attack_piece
+                        ),
+                        // 判断攻击结果，1为失败，0为成功
+                        builder.icmp_eq(
+                            builder.add_constant_64(0),
+                            out_attack_result
+                        )
+                    )
+                 )
+            )
+        }
+
+        let circuit = builder.build();
+
+        AttackCircuit {
+            circuit,
+            cont,
+            size,
+            piece,
+            nonce,
+            out_hash,
+            attack_piece,
+            out_attack_result
         }
     })
 }
