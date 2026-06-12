@@ -5,6 +5,9 @@ use crate::zk_manger::battleship::{attack_prove, attack_verify, init_chessboard_
 mod circuits;
 mod zk_manger;
 
+
+/// 仅作为测试
+/// 
 fn main() {
     init_chessboard();
     attack();
@@ -15,7 +18,7 @@ fn main() {
     let nonce;
     let cont:u64 = 2;
     let size:u64 = 25;
-    let attack_piece = 5;
+    let attack_piece = 30;
     match init_chessboard_prove(cont,size,&pieces) {
         Ok(p)=>{
             proof=p.0;
