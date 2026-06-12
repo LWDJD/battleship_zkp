@@ -32,7 +32,7 @@ impl std::error::Error for OutsideError {}
 /// 棋盘证明的公开数据
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InitChessboardPublic {
-    pub cont: u64,
+    pub count: u64,
     pub size: u64,
     pub out_hash: [u64; 4],
 }
@@ -45,7 +45,7 @@ pub struct InitChessboardProof{
 /// 攻击证明的公开数据
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AttackCircuitPublic {
-    pub cont: u64,
+    pub count: u64,
     pub size: u64,
     pub out_hash: [u64; 4],
     pub attack_piece: u64,
@@ -62,13 +62,13 @@ impl InitChessboardPublic {
     pub fn from_public_words(proof: &InitChessboardProof) -> Option<Self> {
         let chess = battleship::init_chessboard();
 
-        let cont = *proof.public_words.get(chess.circuit.witness_index(chess.cont).0 as usize)?;
+        let count = *proof.public_words.get(chess.circuit.witness_index(chess.count).0 as usize)?;
         let size = *proof.public_words.get(chess.circuit.witness_index(chess.size).0 as usize)?;
         let mut out_hash = [0u64; 4];
         for i in 0..4 {
             out_hash[i] = *proof.public_words.get(chess.circuit.witness_index(chess.out_hash[i]).0 as usize)?;
         }
-        Some(Self { cont, size, out_hash })
+        Some(Self { count, size, out_hash })
     }
 }
 
@@ -77,7 +77,7 @@ impl AttackCircuitPublic {
     pub fn from_public_words(proof: &AttackCircuitProof) -> Option<Self> {
         let chess = battleship::attack();
 
-        let cont = *proof.public_words.get(chess.circuit.witness_index(chess.cont).0 as usize)?;
+        let count = *proof.public_words.get(chess.circuit.witness_index(chess.count).0 as usize)?;
         let size = *proof.public_words.get(chess.circuit.witness_index(chess.size).0 as usize)?;
         let mut out_hash = [0u64; 4];
         for i in 0..4 {
@@ -85,19 +85,19 @@ impl AttackCircuitPublic {
         }
         let attack_piece = *proof.public_words.get(chess.circuit.witness_index(chess.attack_piece).0 as usize)?;
         let out_attack_result = *proof.public_words.get(chess.circuit.witness_index(chess.out_attack_result).0 as usize)?;
-        Some(Self { cont, size, out_hash,attack_piece,out_attack_result })
+        Some(Self { count, size, out_hash,attack_piece,out_attack_result })
     }
 }
 
 
 //证明棋盘的初始化状态
-pub fn init_chessboard_prove(cont:u64, size:u64, pieces:&[u8]) ->  Result<(InitChessboardProof,[u8;32]), Box<dyn std::error::Error>>  {
+pub fn init_chessboard_prove(count:u64, size:u64, pieces:&[u8;8]) ->  Result<(InitChessboardProof, [u8;32]), Box<dyn std::error::Error>>  {
     // 电路信息
     let chessboard_circuit = battleship::init_chessboard();
     // 证明信息传输器
     let mut witness = chessboard_circuit.circuit.new_witness_filler();
 
-    witness[chessboard_circuit.cont]=Word(cont);
+    witness[chessboard_circuit.count]=Word(count);
     witness[chessboard_circuit.size]=Word(size);
 
     // 打包 8 个坐标（每坐标 1 字节）进 1 个 wire
@@ -174,13 +174,13 @@ pub fn init_chessboard_verify(
 }
 
 
-pub fn attack_prove(cont:&u64, size:&u64, pieces:&[u8;8],nonce:&[u8;32],attack_piece:&u64) ->  Result<AttackCircuitProof, Box<dyn std::error::Error>>  {
+pub fn attack_prove(count:&u64, size:&u64, pieces:&[u8;8], nonce:&[u8;32], attack_piece:&u64) ->  Result<AttackCircuitProof, Box<dyn std::error::Error>>  {
     // 电路信息
     let circuit = battleship::attack();
     // 证明信息传输器
     let mut witness = circuit.circuit.new_witness_filler();
 
-    witness[circuit.cont]=Word(cont.clone());
+    witness[circuit.count]=Word(count.clone());
     witness[circuit.size]=Word(size.clone());
 
     // 打包 8 个坐标（每坐标 1 字节）进 1 个 wire

@@ -34,7 +34,7 @@ fn main() {
 
     match InitChessboardPublic::from_public_words(&proof) {
         Some(public)=>{
-            println!("公开值：{},{}",public.cont,public.size);
+            println!("公开值：{},{}", public.count, public.size);
         }
         _ => {}
     }
