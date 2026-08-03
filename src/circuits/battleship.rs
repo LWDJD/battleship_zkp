@@ -92,7 +92,7 @@ pub fn init_chessboard()->&'static ChessboardCircuit{
 
         ChessboardCircuit {
                 circuit,
-            count,
+                count,
                 size,
                 piece,
                 nonce,
