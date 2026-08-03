@@ -182,6 +182,7 @@ pub fn attack_prove(count:&u64, size:&u64, pieces:&[u8;8], nonce:&[u8;32], attac
 
     witness[circuit.count]=Word(count.clone());
     witness[circuit.size]=Word(size.clone());
+    witness[circuit.attack_piece]=Word(attack_piece.clone());
 
     // 打包 8 个坐标（每坐标 1 字节）进 1 个 wire
     let mut packed = 0u64;

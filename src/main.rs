@@ -13,12 +13,12 @@ fn main() {
     attack();
 
     let t0 = Instant::now();
-    let pieces:[u8;8]=[2,9,0,0,0,0,0,0];
+    let pieces:[u8;8]=[2,5,0,0,0,0,0,0];
     let proof:InitChessboardProof;
     let nonce;
     let cont:u64 = 2;
     let size:u64 = 25;
-    let attack_piece = 30;
+    let attack_piece = 1;
     match init_chessboard_prove(cont,size,&pieces) {
         Ok(p)=>{
             proof=p.0;
@@ -70,6 +70,7 @@ fn main() {
                     }else {
                         println!("攻击结果已证明：命中");
                     }
+                    println!("攻击坐标：{}",a.attack_piece);
                 }
 
                 _ => {println!("攻击结果已证明：公开值读取失败");}
