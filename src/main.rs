@@ -1,9 +1,6 @@
 use std::time::Instant;
-use crate::circuits::battleship::{attack, init_chessboard};
-use crate::zk_manger::battleship::{attack_prove, attack_verify, init_chessboard_prove, init_chessboard_verify, AttackCircuitPublic, InitChessboardProof, InitChessboardPublic, OutsideError};
-
-mod circuits;
-mod zk_manger;
+use battleship_zkp::circuits::battleship::{attack, init_chessboard};
+use battleship_zkp::zk_manger::battleship::{attack_prove, attack_verify, init_chessboard_prove, init_chessboard_verify, AttackCircuitPublic, InitChessboardProof, InitChessboardPublic, OutsideError};
 
 
 /// 仅作为测试
