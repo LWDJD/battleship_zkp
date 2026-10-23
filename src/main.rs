@@ -15,7 +15,7 @@ fn main() {
     let nonce;
     let cont:u64 = 2;
     let size:u64 = 25;
-    let attack_piece = 1;
+    let attack_piece = 2;
     match init_chessboard_prove(cont,size,&pieces) {
         Ok(p)=>{
             proof=p.0;
