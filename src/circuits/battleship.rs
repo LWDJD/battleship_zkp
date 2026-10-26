@@ -160,12 +160,18 @@ pub fn attack()->&'static AttackCircuit{
         // 棋盘检查
         chessboard_check(&builder, &piece_list, count, size);
 
-        // 攻击检查
+        // 攻击检查（有意为之的单向约束）
+        // 只禁止「打中在用棋子却报未命中」，不禁止「没打中却报命中」。
+        // 理由：证明者是棋盘持有者，虚报命中对自己不利（只对进攻方有利），
+        //       因此信任模型下无需约束反方向。
+        // 前提：nonce 只由持有者掌握；结算不得让「命中」直接产生收益。
+        //       若未来把证明权交给第三方，或命中进入结算，必须改为
+        //       assert_eq(out_attack_result, hit) 的全向约束。
         for i in 0..piece_list.len(){
             builder.assert_false("attack",
                  // 属于使用 不允许的情况 1 and 1 == 1(不通过)
                  // 属于使用 允许的情况   1 and 0 == 0
-                 // 不属于使用 不允许的情况 1 and 0 == 0
+                 // 不属于使用 不允许的情况 0 and 1 == 0
                  // 不属于使用 允许的情况 0 and 0 == 0
                  builder.band(
                      // 判断棋子是否为被使用的棋子，小于为1，大于等于为0
@@ -173,8 +179,8 @@ pub fn attack()->&'static AttackCircuit{
                      // 判断被攻击的坐标是否成功
                      // 是目标 失败 1 and 1 == 1 (不允许出现的情况)
                      // 是目标 成功 1 and 0 == 0
-                     // 不是目标 失败 0 and 0 == 0
-                     // 不是目标 成功 0 and 1 == 0
+                     // 不是目标 失败 0 and 1 == 0
+                     // 不是目标 成功 0 and 0 == 0
                      builder.band(
                         //确认此元素是否为被攻击的坐标,1为是 0为否
                         builder.icmp_eq(
