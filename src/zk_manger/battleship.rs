@@ -215,10 +215,9 @@ pub fn attack_prove(count:&u64, size:&u64, pieces:&[u8;8], nonce:&[u8;32], attac
 
     // 计算攻击是否成功
     let mut attack_result:u64 = 0;
-    for i in pieces.iter(){
-        let ii = i.clone() as u64;
-        if attack_piece.eq(&ii){
-            attack_result=1;
+    for &p in pieces.iter().take(*count as usize) {
+        if p as u64 == *attack_piece {
+            attack_result = 1;
         }
     }
     witness[circuit.out_attack_result] = Word(attack_result);
